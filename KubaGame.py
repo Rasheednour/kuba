@@ -14,6 +14,17 @@ class Player:
     def get_captured_marbles(self):
         return self._captured_marbles
 
+    def get_play_color(self):
+
+        return self._play_color
+
+    def capture_marble(self, marble_color):
+
+        if marble_color != self._play_color:
+            if marble_color == "R":
+                self._captured_marbles["R"] += 1
+            else:
+                self._captured_marbles["OPPONENT"] +=1
 
     def __repr__(self):
         return self._name
@@ -39,6 +50,9 @@ class Marble:
     def get_color(self):
         return self._color
 
+    def set_coordinates(self, new_coordinates):
+        self._coordinates = new_coordinates
+
     def __repr__(self):
         return self._color
 
@@ -52,6 +66,7 @@ class KubaGame:
         self._winner = None
         self._player_1 = Player(player_1)
         self._player_2 = Player(player_2)
+        self._past_move = ""
 
     def initiate_board(self):
         for row_number in range(0, 7):
@@ -88,102 +103,285 @@ class KubaGame:
         return None
 
     def is_move_legal(self, player, coordinates, push_direction):
-
         row_number = coordinates[0]
         column_number = coordinates[1]
+        opponent = None
+
+        if player == self._player_1:
+
+            opponent = self._player_2
+
+        else:
+
+            opponent = self._player_1
+
+        if not player:
+            return False
 
         if self._winner:
 
-            return "Game is already won"
+            return False
 
-        if self._current_turn != player and self._current_turn is not None:
+        if coordinates[0] > 6 or coordinates[0] < 0 or coordinates[1] > 6 or coordinates[1] < 0:
+
+            return False
+
+        if self._board[coordinates] == "X": # if attempting to push an empty square
+
+            return False
+
+        if self._board[coordinates].get_color() == "R": # if attempting to push a red marble
+
+            return False
+
+        if self._board[coordinates].get_color() == opponent.get_play_color(): # if attempting to push opponent's marble
+
+            return False
+
+        if self._current_turn != player and self._current_turn is not None: # if it's not player's turn to play
+            print("here")
 
             return False
 
         if push_direction == "F":
 
-            if self._board[(row_number + 1, column_number)]:
+            if row_number + 1 == 7:
+
+                return True
+
+            if self._board[(row_number + 1, column_number)] != "X":
 
                 return False
 
             return True
 
-        elif push_direction == "B":
+        if push_direction == "B":
 
-            if self._board[(row_number - 1, column_number)]:
+            if row_number - 1 == -1:
+
+                return True
+
+            if self._board[(row_number - 1, column_number)] != "X":
+
                 return False
 
             return True
 
-        elif push_direction == "R":
+        if push_direction == "R":
 
-            if self._board[(row_number, column_number - 1)]:
+            if column_number - 1 == -1:
+                return True
+
+            if self._board[(row_number, column_number - 1)] != "X":
+
                 return False
 
             return True
-        elif push_direction == "L":
 
-            if self._board[(row_number, column_number + 1)]:
+        if push_direction == "L":
+
+            if column_number + 1 == 7:
+                return True
+
+            if self._board[(row_number, column_number + 1)] != "X":
+
                 return False
 
             return True
 
-        else:
-            return "Invalid move!"
 
-    def update_board(self, coordinates, push_direction):
 
+
+
+
+    def get_marble_set(self, coordinates, push_direction):
+        # check case if pushing own marbles off board
+        marble_set = []
+        # first append first marble in line.
         row_number = coordinates[0]
         column_number = coordinates[1]
 
+        if push_direction == "F":
+            if row_number < 0:
+                return marble_set
+            else:
+                while self._board[(row_number, column_number)] != "X":
+                    marble_set.append(self._board[(row_number, column_number)])
+                    row_number -= 1
+                    if row_number < 0:
+                        break
+                return marble_set
 
+        if push_direction == "B":
 
-    def update_winner(self):
+            if row_number > 6:
+                return marble_set
 
+            else:
 
+                while self._board[(row_number, column_number)] != "X":
+
+                    marble_set.append(self._board[(row_number, column_number)])
+                    row_number += 1
+                    if row_number > 6:
+                        break
+
+                return marble_set
+
+        if push_direction == "R":
+
+            if column_number > 6:
+                return marble_set
+
+            else:
+
+                while self._board[(row_number, column_number)] != "X":
+
+                    marble_set.append(self._board[(row_number, column_number)])
+                    column_number += 1
+                    if column_number > 6:
+                        break
+
+                return marble_set
+
+        if push_direction == "L":
+
+            if column_number < 0:
+                return marble_set
+
+            else:
+
+                while self._board[(row_number, column_number)] != "X":
+                    marble_set.append(self._board[(row_number, column_number)])
+                    column_number -= 1
+                    if column_number < 0:
+                        break
+
+                return marble_set
+
+    def push_marbles(self, marbles_to_push, push_direction, player):
+
+        reversed_list = list(marbles_to_push)
+        reversed_list.reverse()
+        if push_direction == "F":
+            # iterate through reversed list
+            for marble in reversed_list:
+                #
+                current_position = marble.get_coordinates()
+                current_row_num = current_position[0]
+                current_col_num = current_position[1]
+                new_position = (current_row_num - 1, current_col_num)
+                if new_position[0] < 0:
+                    if marble.get_color() == player.get_play_color():
+                        return False
+                    player.capture_marble(marble.get_color())
+                    if len(marbles_to_push) == 1:
+                        self._board[current_position] = "X"
+
+                self._board[new_position] = marble
+                marble.set_coordinates(new_position)
+                self._board[current_position] = "X"
+
+        if push_direction == "B":
+            # iterate through reversed list
+            for marble in reversed_list:
+                #
+                current_position = marble.get_coordinates()
+                current_row_num = current_position[0]
+                current_col_num = current_position[1]
+                new_position = (current_row_num + 1, current_col_num)
+                if new_position[0] > 6:
+                    if marble.get_color() == player.get_play_color():
+                        return False
+                    player.capture_marble(marble.get_color())
+                    if len(marbles_to_push) == 1:
+                        self._board[current_position] = "X"
+
+                self._board[new_position] = marble
+                marble.set_coordinates(new_position)
+                self._board[current_position] = "X"
+
+        if push_direction == "R":
+            # iterate through reversed list
+            for marble in reversed_list:
+                #
+                current_position = marble.get_coordinates()
+                current_row_num = current_position[0]
+                current_col_num = current_position[1]
+                new_position = (current_row_num, current_col_num + 1)
+                if new_position[1] > 6:
+                    if marble.get_color() == player.get_play_color():
+                        return False
+                    player.capture_marble(marble.get_color())
+                    if len(marbles_to_push) == 1:
+                        self._board[current_position] = "X"
+
+                self._board[new_position] = marble
+                marble.set_coordinates(new_position)
+                self._board[current_position] = "X"
+
+        if push_direction == "L":
+            # iterate through reversed list
+            for marble in reversed_list:
+                #
+                current_position = marble.get_coordinates()
+                current_row_num = current_position[0]
+                current_col_num = current_position[1]
+                new_position = (current_row_num, current_col_num - 1)
+                if new_position[1] < 0:
+                    if marble.get_color() == player.get_play_color():
+                        return False
+                    player.capture_marble(marble.get_color())
+                    if len(marbles_to_push) == 1:
+                        self._board[current_position] = "X"
+
+                self._board[new_position] = marble
+                marble.set_coordinates(new_position)
+                self._board[current_position] = "X"
+
+        if marbles_to_push[-1].get_color() != player.get_play_color():
+            self._past_move = self.display_board()
+
+        return True
+
+    def calculate_win(self, player):
+
+        if player.get_captured_marbles()["R"] == 7 or player.get_captured_marbles()["OPPONENT"] == 8:
+            self._winner = player
 
     def make_move(self, player_name, coordinates, push_direction):
-
         player = self.get_player_from_name(player_name)
-
-        if not player:
-
-            return "Player is not found."
-
+        marbles_to_push = []
         if not self.is_move_legal(player, coordinates, push_direction):
-
-            return "Invalid move!"
-
+            return False
         if self._current_turn is None:
 
             self._current_turn = player
 
+        marbles_to_push = self.get_marble_set(coordinates, push_direction)
 
+        push_marbles = self.push_marbles(marbles_to_push, push_direction, player)
 
+        if not push_marbles:
+            return False
 
+        if self.display_board() == self._past_move:
+            return False
 
+        self.calculate_win(player)
 
+        if self._current_turn == self._player_1:
 
-
-
-
-
+            self._current_turn = self._player_2
 
         else:
-            if self._current_turn == self._player_1:
-                self._current_turn = self._player_2
-
-            else:
-                self._current_turn = self._player_1
+            self._current_turn = self._player_1
 
 
-
-
-
-
-
+        return True
 
     def get_winner(self):
+
         return self._winner
 
     def get_captured(self, player_name):
@@ -191,32 +389,40 @@ class KubaGame:
         player_2 = self._player_2
 
         if player_1.get_name() == player_name:
-            return player_1.get_captured_marbles()["R"]
+            return player_1.get_captured_marbles()
 
         elif player_2.get_name() == player_name:
-            return player_2.get_captured_marbles()["R"]
+            return player_2.get_captured_marbles()
 
         else:
 
             return "Player not found!"
 
     def get_marble(self, cell_coords):
-        pass
+
+        return self._board[cell_coords]
 
     def get_marble_count(self):
-
-        count = [0, 0, 0]
+        white_count = 0
+        black_count = 0
+        red_count = 0
 
         for square in self._board:
 
-            if self._board[square] != "X":
+            if self._board[square] != "X"\
+                    and square[0] <= 6\
+                    and square[0] >= 0\
+                    and square[1] <= 6\
+                    and square[1] >= 0:
+
                 if self._board[square].get_color() == "W":
-                    count[0] += 1
+                    white_count += 1
                 elif self._board[square].get_color() == "B":
-                    count[1] += 1
+                    black_count += 1
                 else:
-                    count[2] += 1
-        return count[0], count[1], count[2]
+                    red_count += 1
+
+        return white_count, black_count, red_count
 
     def display_board(self):
         board = ""
@@ -232,8 +438,77 @@ class KubaGame:
         return board
 
 
-
-game = KubaGame(("PLayer_1", "W"), ("Player_2", "B"))
+game = KubaGame(("Player_1", "W"), ("Player_2", "B"))
 print(game.display_board())
-print(game.get_marble_count())
-print(game.get_captured("Player_3"))
+
+
+
+
+
+game.make_move("Player_1", (6, 5), "F")
+
+print(game.display_board())
+game.make_move("Player_2", (6, 0), "F")
+print(game.display_board())
+print(game.get_current_turn())
+
+game.make_move("Player_1", (5, 5), "F") # PLAYER TURN NOT CHANGING HERE FOR SOME REASON
+
+print(game.display_board())
+print(game.get_current_turn())
+print(game.make_move("Player_2", (0, 5), "B"))
+print(game.display_board())
+
+
+# game.make_move("Player_2", (5, 0), "F")
+# print(game.display_board())
+# game.make_move("Player_1", (4, 5), "F")
+# print(game.display_board())
+# game.make_move("Player_2", (4, 0), "F")
+# print(game.display_board())
+# game.make_move("Player_1", (3, 5), "F")
+# print(game.display_board())
+# print(game.get_captured("Player_1"))
+# game.make_move("Player_2", (3, 0), "F")
+# print(game.display_board())
+# game.make_move("Player_1", (2, 5), "F")
+# print(game.display_board())
+#
+# game.make_move("Player_2", (0, 6), "L")
+# print(game.display_board())
+#
+# game.make_move("Player_1", (1, 5), "R")
+# print(game.display_board())
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
