@@ -1,6 +1,9 @@
 # Author: Rasheed Mohammed
 # Date: 05/30/2021
-# Description: Write a class named KubaGame for playing a board game called Kuba.
+# Description: Write a class named KubaGame that initiates a board game called Kuba.
+
+import copy
+
 
 class Player:
     """
@@ -123,7 +126,7 @@ class KubaGame:
         self._winner = None
         self._player_1 = Player(player_1)
         self._player_2 = Player(player_2)
-        self._past_move = {player_1[0]: {}, player_2[0]: {}}
+        self._board_history = copy.deepcopy(self._board)
 
     def initiate_board(self):
         for row_number in range(0, 7):
@@ -310,16 +313,10 @@ class KubaGame:
 
                 return marble_set
 
-    def push_marbles(self, marbles_to_push, push_direction, player, player_name):
+    def push_marbles(self, marbles_to_push, push_direction, player, board):
 
-        reversed_list = list(marbles_to_push)
+        reversed_list = copy.deepcopy(marbles_to_push)
         reversed_list.reverse()
-
-#        if self._past_move[player_name] != {}:
-#            self._past_move[player_name].clear()
-
-#        if marbles_to_push[-1].get_color() != player.get_play_color() and marbles_to_push[-1].get_color() != "R":
-#            self._past_move[player_name] = dict(self._board)
 
         if push_direction == "F":
             # iterate through reversed list
@@ -334,11 +331,11 @@ class KubaGame:
                         return False
                     player.capture_marble(marble.get_color())
                     if len(marbles_to_push) == 1:
-                        self._board[current_position] = "X"
+                        board[current_position] = "X"
 
-                self._board[new_position] = marble
+                board[new_position] = marble
                 marble.set_coordinates(new_position)
-                self._board[current_position] = "X"
+                board[current_position] = "X"
 
         if push_direction == "B":
             # iterate through reversed list
@@ -354,11 +351,11 @@ class KubaGame:
                         return False
                     player.capture_marble(marble.get_color())
                     if len(marbles_to_push) == 1:
-                        self._board[current_position] = "X"
+                        board[current_position] = "X"
 
-                self._board[new_position] = marble
+                board[new_position] = marble
                 marble.set_coordinates(new_position)
-                self._board[current_position] = "X"
+                board[current_position] = "X"
 
         if push_direction == "R":
             # iterate through reversed list
@@ -373,11 +370,11 @@ class KubaGame:
                         return False
                     player.capture_marble(marble.get_color())
                     if len(marbles_to_push) == 1:
-                        self._board[current_position] = "X"
+                        board[current_position] = "X"
 
-                self._board[new_position] = marble
+                board[new_position] = marble
                 marble.set_coordinates(new_position)
-                self._board[current_position] = "X"
+                board[current_position] = "X"
 
         if push_direction == "L":
             # iterate through reversed list
@@ -392,11 +389,11 @@ class KubaGame:
                         return False
                     player.capture_marble(marble.get_color())
                     if len(marbles_to_push) == 1:
-                        self._board[current_position] = "X"
+                        board[current_position] = "X"
 
-                self._board[new_position] = marble
+                board[new_position] = marble
                 marble.set_coordinates(new_position)
-                self._board[current_position] = "X"
+                board[current_position] = "X"
 
         return True
 
@@ -404,6 +401,43 @@ class KubaGame:
 
         if player.get_captured_marbles()["R"] == 7 or player.get_captured_marbles()["OPPONENT"] == 8:
             self._winner = player
+
+    def check_undo(self, marbles_to_push, push_direction, player):
+        """
+        Checks if the player is attempting to undo the opponent's move.
+        :param marbles_to_push: set of marbles to be pushed
+        :param push_direction: pushing direction
+        :param player: the player object attempting to push the marbles.
+        :return: True if the player's move is undoing the opponent's move and False otherwise.
+        """
+        test_player = copy.deepcopy(player)
+        test_board = copy.deepcopy(self._board)
+        test_push = self.push_marbles(marbles_to_push, push_direction, test_player, test_board)
+        if not test_push:
+            return False
+
+        marble_list_1 = []
+        marble_list_2 = []
+
+        for coordinate in test_board:
+            if test_board[coordinate] == "X":
+                marble_list_1.append("X")
+            else:
+                marble_list_1.append(test_board[coordinate].get_color())
+
+        for coordinate in self._board_history:
+            if self._board_history[coordinate] == "X":
+                marble_list_2.append("X")
+            else:
+                marble_list_2.append(self._board_history[coordinate].get_color())
+
+        if marble_list_1 == marble_list_2:
+            return False
+
+        # if test_board == self._board_history:
+        #     return False
+
+        return True
 
     def make_move(self, player_name, coordinates, push_direction):
         player = self.get_player_from_name(player_name)
@@ -415,18 +449,17 @@ class KubaGame:
             self._current_turn = player
 
         marbles_to_push = self.get_marble_set(coordinates, push_direction)
-        push_marbles = self.push_marbles(marbles_to_push, push_direction, player, player_name)
+
+        test_marbles = copy.deepcopy(marbles_to_push)
+        if not self.check_undo(test_marbles, push_direction, player):
+            return False
+
+        self._board_history = copy.deepcopy(self._board)
+
+        push_marbles = self.push_marbles(marbles_to_push, push_direction, player, self._board)
 
         if not push_marbles:
             return False
-
-#        for key in self._past_move:
-#            if key != player_name:
-#                # key is opponent
-#                if self._board == self._past_move[key]:
-#                    self._board = dict(self._past_move[player_name])  #ERROR IS HERE, ATTEMPT NOT CHANGING SELF.BOARD AT ALL.
-#                    print("board is", self._board)
-#                    return False
 
         self.calculate_win(player)
 
@@ -507,7 +540,40 @@ class KubaGame:
 # print("-------------------------------")
 # print("\n")
 #
-# print(game.make_move("Player_2", (6, 0), "F"))
+# print(game.make_move("Player_2", (5, 0), "R"))
+# print(game.display_board())
+# print("marble count is: ", game.get_marble_count())
+# print("current turn is: ", game.get_current_turn())
+# print("captured player_1 marbles: ", game.get_captured("Player_1"))
+# print("captured player_2 marbles: ", game.get_captured("Player_2"))
+# print("game winner is: ", game.get_winner())
+# print("marble at (0, 0) coordinates is: ", game.get_marble((3, 3)))
+# print("-------------------------------")
+# print("\n")
+# #
+# print(game.make_move("Player_1", (5, 6), "L"))
+# print(game.display_board())
+# print("marble count is: ", game.get_marble_count())
+# print("current turn is: ", game.get_current_turn())
+# print("captured player_1 marbles: ", game.get_captured("Player_1"))
+# print("captured player_2 marbles: ", game.get_captured("Player_2"))
+# print("game winner is: ", game.get_winner())
+# print("marble at (0, 0) coordinates is: ", game.get_marble((3, 3)))
+# print("-------------------------------")
+# print("\n")
+# #
+# print(game.make_move("Player_2", (5, 1), "R"))
+# print(game.display_board())
+# print("marble count is: ", game.get_marble_count())
+# print("current turn is: ", game.get_current_turn())
+# print("captured player_1 marbles: ", game.get_captured("Player_1"))
+# print("captured player_2 marbles: ", game.get_captured("Player_2"))
+# print("game winner is: ", game.get_winner())
+# print("marble at (0, 0) coordinates is: ", game.get_marble((3, 3)))
+# print("-------------------------------")
+# print("\n")
+# #
+# print(game.make_move("Player_1", (5, 6), "L"))
 # print(game.display_board())
 # print("marble count is: ", game.get_marble_count())
 # print("current turn is: ", game.get_current_turn())
@@ -529,7 +595,7 @@ class KubaGame:
 # print("-------------------------------")
 # print("\n")
 #
-# print(game.make_move("Player_2", (5, 0), "R"))
+# print(game.make_move("Player_1", (6, 6), "L"))
 # print(game.display_board())
 # print("marble count is: ", game.get_marble_count())
 # print("current turn is: ", game.get_current_turn())
@@ -540,7 +606,7 @@ class KubaGame:
 # print("-------------------------------")
 # print("\n")
 #
-# print(game.make_move("Player_1", (5, 4), "F"))
+# print(game.make_move("Player_2", (5, 3), "F"))
 # print(game.display_board())
 # print("marble count is: ", game.get_marble_count())
 # print("current turn is: ", game.get_current_turn())
@@ -551,6 +617,253 @@ class KubaGame:
 # print("-------------------------------")
 # print("\n")
 #
+# print(game.make_move("Player_1", (6, 5), "L"))
+# print(game.display_board())
+# print("marble count is: ", game.get_marble_count())
+# print("current turn is: ", game.get_current_turn())
+# print("captured player_1 marbles: ", game.get_captured("Player_1"))
+# print("captured player_2 marbles: ", game.get_captured("Player_2"))
+# print("game winner is: ", game.get_winner())
+# print("marble at (0, 0) coordinates is: ", game.get_marble((3, 3)))
+# print("-------------------------------")
+# print("\n")
+#
+# print(game.make_move("Player_2", (4, 3), "F"))
+# print(game.display_board())
+# print("marble count is: ", game.get_marble_count())
+# print("current turn is: ", game.get_current_turn())
+# print("captured player_1 marbles: ", game.get_captured("Player_1"))
+# print("captured player_2 marbles: ", game.get_captured("Player_2"))
+# print("game winner is: ", game.get_winner())
+# print("marble at (0, 0) coordinates is: ", game.get_marble((3, 3)))
+# print("-------------------------------")
+# print("\n")
+#
+# print(game.make_move("Player_1", (6, 4), "L"))
+# print(game.display_board())
+# print("marble count is: ", game.get_marble_count())
+# print("current turn is: ", game.get_current_turn())
+# print("captured player_1 marbles: ", game.get_captured("Player_1"))
+# print("captured player_2 marbles: ", game.get_captured("Player_2"))
+# print("game winner is: ", game.get_winner())
+# print("marble at (0, 0) coordinates is: ", game.get_marble((3, 3)))
+# print("-------------------------------")
+# print("\n")
+#
+# print(game.make_move("Player_2", (3, 3), "F"))
+# print(game.display_board())
+# print("marble count is: ", game.get_marble_count())
+# print("current turn is: ", game.get_current_turn())
+# print("captured player_1 marbles: ", game.get_captured("Player_1"))
+# print("captured player_2 marbles: ", game.get_captured("Player_2"))
+# print("game winner is: ", game.get_winner())
+# print("marble at (0, 0) coordinates is: ", game.get_marble((3, 3)))
+# print("-------------------------------")
+# print("\n")
+#
+# print(game.make_move("Player_1", (6, 2), "F"))
+# print(game.display_board())
+# print("marble count is: ", game.get_marble_count())
+# print("current turn is: ", game.get_current_turn())
+# print("captured player_1 marbles: ", game.get_captured("Player_1"))
+# print("captured player_2 marbles: ", game.get_captured("Player_2"))
+# print("game winner is: ", game.get_winner())
+# print("marble at (0, 0) coordinates is: ", game.get_marble((3, 3)))
+# print("-------------------------------")
+# print("\n")
+#
+# print(game.make_move("Player_2", (6, 0), "R"))
+# print(game.display_board())
+# print("marble count is: ", game.get_marble_count())
+# print("current turn is: ", game.get_current_turn())
+# print("captured player_1 marbles: ", game.get_captured("Player_1"))
+# print("captured player_2 marbles: ", game.get_captured("Player_2"))
+# print("game winner is: ", game.get_winner())
+# print("marble at (0, 0) coordinates is: ", game.get_marble((3, 3)))
+# print("-------------------------------")
+# print("\n")
+#
+# print(game.make_move("Player_1", (6, 3), "L"))
+# print(game.display_board())
+# print("marble count is: ", game.get_marble_count())
+# print("current turn is: ", game.get_current_turn())
+# print("captured player_1 marbles: ", game.get_captured("Player_1"))
+# print("captured player_2 marbles: ", game.get_captured("Player_2"))
+# print("game winner is: ", game.get_winner())
+# print("marble at (0, 0) coordinates is: ", game.get_marble((3, 3)))
+# print("-------------------------------")
+# print("\n")
+#
+# print(game.make_move("Player_2", (6, 0), "R"))
+# print(game.display_board())
+# print("marble count is: ", game.get_marble_count())
+# print("current turn is: ", game.get_current_turn())
+# print("captured player_1 marbles: ", game.get_captured("Player_1"))
+# print("captured player_2 marbles: ", game.get_captured("Player_2"))
+# print("game winner is: ", game.get_winner())
+# print("marble at (0, 0) coordinates is: ", game.get_marble((3, 3)))
+# print("-------------------------------")
+# print("\n")
+#
+# print(game.make_move("Player_2", (2, 3), "F"))
+# print(game.display_board())
+# print("marble count is: ", game.get_marble_count())
+# print("current turn is: ", game.get_current_turn())
+# print("captured player_1 marbles: ", game.get_captured("Player_1"))
+# print("captured player_2 marbles: ", game.get_captured("Player_2"))
+# print("game winner is: ", game.get_winner())
+# print("marble at (0, 0) coordinates is: ", game.get_marble((3, 3)))
+# print("-------------------------------")
+# print("\n")
+#
+# print(game.make_move("Player_1", (6, 2), "L"))
+# print(game.display_board())
+# print("marble count is: ", game.get_marble_count())
+# print("current turn is: ", game.get_current_turn())
+# print("captured player_1 marbles: ", game.get_captured("Player_1"))
+# print("captured player_2 marbles: ", game.get_captured("Player_2"))
+# print("game winner is: ", game.get_winner())
+# print("marble at (0, 0) coordinates is: ", game.get_marble((3, 3)))
+# print("-------------------------------")
+# print("\n")
+#
+# print(game.make_move("Player_2", (1, 3), "F"))
+# print(game.display_board())
+# print("marble count is: ", game.get_marble_count())
+# print("current turn is: ", game.get_current_turn())
+# print("captured player_1 marbles: ", game.get_captured("Player_1"))
+# print("captured player_2 marbles: ", game.get_captured("Player_2"))
+# print("game winner is: ", game.get_winner())
+# print("marble at (0, 0) coordinates is: ", game.get_marble((3, 3)))
+# print("-------------------------------")
+# print("\n")
+#
+# print(game.make_move("Player_1", (6, 1), "L"))
+# print(game.display_board())
+# print("marble count is: ", game.get_marble_count())
+# print("current turn is: ", game.get_current_turn())
+# print("captured player_1 marbles: ", game.get_captured("Player_1"))
+# print("captured player_2 marbles: ", game.get_captured("Player_2"))
+# print("game winner is: ", game.get_winner())
+# print("marble at (0, 0) coordinates is: ", game.get_marble((3, 3)))
+# print("-------------------------------")
+# print("\n")
+#
+# print(game.make_move("Player_2", (0, 3), "R"))
+# print(game.display_board())
+# print("marble count is: ", game.get_marble_count())
+# print("current turn is: ", game.get_current_turn())
+# print("captured player_1 marbles: ", game.get_captured("Player_1"))
+# print("captured player_2 marbles: ", game.get_captured("Player_2"))
+# print("game winner is: ", game.get_winner())
+# print("marble at (0, 0) coordinates is: ", game.get_marble((3, 3)))
+# print("-------------------------------")
+# print("\n")
+#
+# print(game.make_move("Player_1", (5, 2), "L"))
+# print(game.display_board())
+# print("marble count is: ", game.get_marble_count())
+# print("current turn is: ", game.get_current_turn())
+# print("captured player_1 marbles: ", game.get_captured("Player_1"))
+# print("captured player_2 marbles: ", game.get_captured("Player_2"))
+# print("game winner is: ", game.get_winner())
+# print("marble at (0, 0) coordinates is: ", game.get_marble((3, 3)))
+# print("-------------------------------")
+# print("\n")
+#
+# print(game.make_move("Player_2", (4, 2), "F"))
+# print(game.display_board())
+# print("marble count is: ", game.get_marble_count())
+# print("current turn is: ", game.get_current_turn())
+# print("captured player_1 marbles: ", game.get_captured("Player_1"))
+# print("captured player_2 marbles: ", game.get_captured("Player_2"))
+# print("game winner is: ", game.get_winner())
+# print("marble at (0, 0) coordinates is: ", game.get_marble((3, 3)))
+# print("-------------------------------")
+# print("\n")
+#
+# print(game.make_move("Player_1", (5, 1), "F"))
+# print(game.display_board())
+# print("marble count is: ", game.get_marble_count())
+# print("current turn is: ", game.get_current_turn())
+# print("captured player_1 marbles: ", game.get_captured("Player_1"))
+# print("captured player_2 marbles: ", game.get_captured("Player_2"))
+# print("game winner is: ", game.get_winner())
+# print("marble at (0, 0) coordinates is: ", game.get_marble((3, 3)))
+# print("-------------------------------")
+# print("\n")
+#
+# print(game.make_move("Player_2", (3, 2), "F"))
+# print(game.display_board())
+# print("marble count is: ", game.get_marble_count())
+# print("current turn is: ", game.get_current_turn())
+# print("captured player_1 marbles: ", game.get_captured("Player_1"))
+# print("captured player_2 marbles: ", game.get_captured("Player_2"))
+# print("game winner is: ", game.get_winner())
+# print("marble at (0, 0) coordinates is: ", game.get_marble((3, 3)))
+# print("-------------------------------")
+# print("\n")
+#
+# print(game.make_move("Player_1", (4, 1), "F"))
+# print(game.display_board())
+# print("marble count is: ", game.get_marble_count())
+# print("current turn is: ", game.get_current_turn())
+# print("captured player_1 marbles: ", game.get_captured("Player_1"))
+# print("captured player_2 marbles: ", game.get_captured("Player_2"))
+# print("game winner is: ", game.get_winner())
+# print("marble at (0, 0) coordinates is: ", game.get_marble((3, 3)))
+# print("-------------------------------")
+# print("\n")
+#
+# print(game.make_move("Player_2", (2, 2), "F"))
+# print(game.display_board())
+# print("marble count is: ", game.get_marble_count())
+# print("current turn is: ", game.get_current_turn())
+# print("captured player_1 marbles: ", game.get_captured("Player_1"))
+# print("captured player_2 marbles: ", game.get_captured("Player_2"))
+# print("game winner is: ", game.get_winner())
+# print("marble at (0, 0) coordinates is: ", game.get_marble((3, 3)))
+# print("-------------------------------")
+# print("\n")
+#
+# print(game.make_move("Player_1", (3, 1), "R"))
+# print(game.display_board())
+# print("marble count is: ", game.get_marble_count())
+# print("current turn is: ", game.get_current_turn())
+# print("captured player_1 marbles: ", game.get_captured("Player_1"))
+# print("captured player_2 marbles: ", game.get_captured("Player_2"))
+# print("game winner is: ", game.get_winner())
+# print("marble at (0, 0) coordinates is: ", game.get_marble((3, 3)))
+# print("-------------------------------")
+# print("\n")
+#
+# print(game.make_move("Player_2", (1, 2), "F"))
+# print(game.display_board())
+# print("marble count is: ", game.get_marble_count())
+# print("current turn is: ", game.get_current_turn())
+# print("captured player_1 marbles: ", game.get_captured("Player_1"))
+# print("captured player_2 marbles: ", game.get_captured("Player_2"))
+# print("game winner is: ", game.get_winner())
+# print("marble at (0, 0) coordinates is: ", game.get_marble((3, 3)))
+# print("-------------------------------")
+# print("\n")
+#
+# print(game.make_move("Player_1", (6, 0), "R"))
+# print(game.display_board())
+# print("marble count is: ", game.get_marble_count())
+# print("current turn is: ", game.get_current_turn())
+# print("captured player_1 marbles: ", game.get_captured("Player_1"))
+# print("captured player_2 marbles: ", game.get_captured("Player_2"))
+# print("game winner is: ", game.get_winner())
+# print("marble at (0, 0) coordinates is: ", game.get_marble((3, 3)))
+# print("-------------------------------")
+# print("\n")
+
+# for dict1_values, dict2_values in zip(dict_1.items(), dict_2.items()):
+#     if dict1_values.get_color() != dict2_values.get_color():
+#         print("False")
+#     print("EQUAL!")
+
 # print(game.make_move("Player_2", (6, 1), "F"))
 # print(game.display_board())
 # print("marble count is: ", game.get_marble_count())
