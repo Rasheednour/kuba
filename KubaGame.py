@@ -175,7 +175,11 @@ class KubaGame:
         Returns a Player object for the player who's going to play next.
         :return: A player object.
         """
-        return str(self._current_turn)
+
+        if self._current_turn is None:
+            return None
+        else:
+            return str(self._current_turn)
 
     def get_player_from_name(self, player_name):
         """
@@ -703,7 +707,11 @@ class KubaGame:
         Returns the player who won the game, returns None otherwise.
         :return: The player that won the game, None otherwise.
         """
-        return str(self._winner)
+        if self._winner is None:
+            return None
+
+        else:
+            return str(self._winner)
 
     def get_captured(self, player_name):
         """
