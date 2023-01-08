@@ -237,7 +237,6 @@ class KubaGame:
 
         # Return False if the player is not a valid player.
         if not player:
-
             return False
 
         # return False if game is already won.
@@ -801,3 +800,34 @@ class KubaGame:
 
         # the end result is a string object that looks like a board with marbles/empty spaces inside.
         return board
+
+    def print_board(self):
+        board = {}
+        key_list = self._board.keys()
+        for key in key_list:
+            if self._board[key] == "X":
+                board[key] = "X"
+            elif self._board[key].get_color() == "W":
+                board[key] = "W"
+            elif self._board[key].get_color() == "B":
+                board[key] = "B"
+            elif self._board[key].get_color() == "R":
+                board[key] = "R"
+
+        return board
+        # board = {}
+        # for key in self._board.keys():
+        #     marble = self._board[key]
+        #     if marble.get_color() == "R":
+        #         board[key] = "R"
+        #     if marble.get_color() == "W":
+        #         board[key] = "W"
+        #     if marble.get_color() == "B":
+        #         board[key] = "B"
+        #     if marble == "X":
+        #         board[key] = "X"
+        # return board
+
+
+game = KubaGame(("Player_1", "W"), ("Player_2", "B"))
+print(game.print_board())
