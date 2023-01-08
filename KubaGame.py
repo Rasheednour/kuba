@@ -18,6 +18,7 @@ class Player:
         :param player_info: A tuple with a player's name and play color.
         :return: None
         """
+        
         # Player's name is the first value in the tuple.
         self._name = player_info[0]
         # Player color is the second value in the tuple.
